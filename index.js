@@ -1,4 +1,4 @@
-var es = require('event-stream');
+var map = require('vinyl-map');
 var path = require('path');
 var extend = require('xtend');
 
@@ -39,11 +39,11 @@ module.exports = function(options) {
     namespace: ''
   }, options);
 
-  var declareNamespace = function(file, callback) {
-    // Get the name of the template
-    var name = options.processName(file.path);
+  var declareNamespace = function(contents, filename) {
+    contents = contents.toString();
 
-    var contents = file.contents.toString();
+    // Get the name of the template
+    var name = options.processName(filename);
 
     // Prepend namespace to name
     if (options.namespace !== false) {
@@ -59,11 +59,8 @@ module.exports = function(options) {
     // Tack on namespace declaration
     contents = nameNSInfo.declaration+contents;
 
-    file.path = path.join(path.dirname(file.path), name+'.js');
-    file.contents = new Buffer(contents);
-
-    callback(null, file);
+    return contents;
   };
 
-  return es.map(declareNamespace);
+  return map(declareNamespace);
 };

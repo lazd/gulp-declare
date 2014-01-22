@@ -27,9 +27,8 @@ var fileMatchesExpected = function(file, expectedFileName) {
 describe('gulp-handlebars', function() {
   describe('handlebarsPlugin()', function() {
 
-    it('should declare namespaces', function(done) {
+    it('should declare base namespaces', function(done) {
       var stream = handlebarsPlugin({
-        outputType: 'browser',
         namespace: 'MyApp.Templates',
         declareNamespace: true
       });
@@ -51,9 +50,31 @@ describe('gulp-handlebars', function() {
       stream.end();
     });
 
-    it('should declare the namespace for templates', function(done) {
+    it('should assign as a property of a namespace', function(done) {
       var stream = handlebarsPlugin({
-        outputType: 'browser',
+        namespace: 'MyApp.Templates',
+        declareNamespace: true
+      });
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.js'),
+        contents: new Buffer('function() { return "App"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        should.exist(newFile);
+        should.exist(newFile.contents);
+        var contents = String(newFile.contents);
+        contents.should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};this["MyApp"]["Templates"]["App"] = function() { return "App"; };');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
+
+    it('should assign as a property of a sub-namespace', function(done) {
+      var stream = handlebarsPlugin({
         namespace: 'MyApp.Templates',
         declareNamespace: true
       });
@@ -61,14 +82,14 @@ describe('gulp-handlebars', function() {
       var fakeFile = new gutil.File({
         base: 'fixtures',
         path: path.join('fixtures','App.Main.js'),
-        contents: new Buffer('function() { return "Main"; }')
+        contents: new Buffer('function() { return "App"; }')
       });
 
       stream.on('data', function(newFile) {
         should.exist(newFile);
         should.exist(newFile.contents);
         var contents = String(newFile.contents);
-        contents.slice(0,174).should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};this["MyApp"]["Templates"]["App"] = this["MyApp"]["Templates"]["App"] || {};');
+        contents.should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};this["MyApp"]["Templates"]["App"] = this["MyApp"]["Templates"]["App"] || {};this["MyApp"]["Templates"]["App"]["Main"] = function() { return "App"; };');
         done();
       });
       stream.write(fakeFile);
@@ -77,7 +98,6 @@ describe('gulp-handlebars', function() {
 
     it('should support custom processName functions', function(done) {
       var stream = handlebarsPlugin({
-        outputType: 'browser',
         namespace: false,
         processName: function(name) {
           return 'x';
@@ -93,7 +113,33 @@ describe('gulp-handlebars', function() {
       stream.on('data', function(newFile) {
         should.exist(newFile);
         should.exist(newFile.path);
-        newFile.path.should.equal('fixtures/x.js');
+        var contents = String(newFile.contents);
+        contents.should.equal('this["x"] = function() { return "Main"; };');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
+
+    it('should support custom processName functions with namespaces', function(done) {
+      var stream = handlebarsPlugin({
+        namespace: 'App',
+        processName: function(name) {
+          return 'Main';
+        }
+      });
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        should.exist(newFile);
+        should.exist(newFile.path);
+        var contents = String(newFile.contents);
+        contents.should.equal('this["App"] = this["App"] || {};this["App"]["Main"] = function() { return "Main"; };');
         done();
       });
       stream.write(fakeFile);
