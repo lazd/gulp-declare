@@ -32,20 +32,21 @@ gulp.task('templates', function(){
 
 #### options.namespace
 Type: `String`  
-Default: Empty string
+Default: `"this"`
 
-The namespace in which the file contents will be assigned. Use dot notation (e.g. `App.Templates`) for nested namespaces or false to declare templates in the global namespace.
+The namespace in which the file contents will be assigned. Use dot notation (e.g. `MyApp.Templates`) for nested namespaces.
 
-For example, if the namespace is `MyApp.Templates` and a template is named `App.Header.hbs`, the following declaration will be present in the output file for that template:
+For example, if the namespace is `MyApp.Templates` and a file is named `App.Header.js`, the following declaration will be added:
 
 ```javascript
 this["MyApp"] = this["MyApp"] || {};
 this["MyApp"]["templates"] = this["MyApp"]["templates"] || {};
 this["MyApp"]["templates"]["App"] = this["MyApp"]["templates"]["App"] || {};
-this["MyApp"]["templates"]["App"]["Header"] = function () {};
+this["MyApp"]["templates"]["App"]["Header"] = /* File contents from App.Header.js */;
 ```
 
-When processing multiple templates under a given namespace, this will result in duplicate declarations. That is, the non-destructive declaration of the namespace will be repeated for each template compiled.
+If the default value of `"this"` is provided, namespace declaration will be determined soley by the filename and output of `options.processName`. That is, a file names `MyApp.templates.App.Header.js` will result in the same declaration as above.
+
 
 #### options.processName
 Type: `Function`  
@@ -54,6 +55,37 @@ Default: Strip file extension
 This option accepts a function which takes one argument (the filepath) and returns a string which will be used as the key for object. By default, the filename minus the extension is used.
 
 If this function returns a string containing periods (not including the file extension), they will be represented as a sub-namespace. See `options.namespace` for an example of the effect.
+
+
+#### options.noRedeclare
+Type: `Boolean`  
+Default: `false`
+
+If `true`, parts of the namespace that were declared as a result of previous files in the stream will not be redeclared. For instance, if the stream contains the following files:
+
+* Main.Content.js
+* Main.Header.js
+* Main.Footer.js
+
+And if `declare` is invoked with `namespace: 'MyApp'` and `noRedeclare: true`, the contents of the streamed files will look like this:
+
+**Main.Content.js**
+```javascript
+this["MyApp"] = this["MyApp"] || {};
+this["MyApp"]["Main"] = this["MyApp"]["Main"] || {};
+this["MyApp"]["Main"]["Content"] = /* File contents from Main.Content.js */;
+```
+
+**Main.Header.js**
+```javascript
+this["MyApp"]["Main"]["Header"] = /* File contents from Main.Header.js */;
+```
+
+**Main.Footer.js**
+```javascript 
+this["MyApp"]["Main"]["Footer"] = /* File contents from Main.Footer.js */;
+```
+
 
 
 [travis-url]: http://travis-ci.org/lazd/gulp-declare

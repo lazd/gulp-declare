@@ -1,16 +1,16 @@
 {
   "name": "gulp-declare",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "Safely declare namespaces and set their properties",
   "main": "index.js",
   "dependencies": {
-    "vinyl-map": "~0.0.1",
-    "xtend": "~2.1.1"
+    "vinyl-map": "~0.1.0",
+    "xtend": "~2.1.2"
   },
   "devDependencies": {
-    "gulp-util": "~2.2.12",
-    "should": "~2.1.1",
-    "mocha": "~1.15.1"
+    "gulp-util": "~2.2.14",
+    "should": "~3.1.2",
+    "mocha": "~1.17.1"
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha"

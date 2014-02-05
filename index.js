@@ -3,7 +3,7 @@ var path = require('path');
 var extend = require('xtend');
 
 // Return a declaration and namespace name for output
-var getNSInfo = function(ns, omitLast) {
+var getNSInfo = function(ns, omitLast, alreadyDeclared) {
   var output = [];
   var curPath = 'this';
   if (ns !== 'this') {
@@ -17,7 +17,15 @@ var getNSInfo = function(ns, omitLast) {
           return true;
         }
         else {
-          output.push(curPath + ' = ' + curPath + ' || {};');
+          // Avoid redeclaring parts of the namespace
+          if (!alreadyDeclared || !alreadyDeclared[curPath]) {
+            output.push(curPath + ' = ' + curPath + ' || {};');
+          }
+
+          // Store parts of the namespace that have been declared
+          if (alreadyDeclared) {
+            alreadyDeclared[curPath] = true;
+          }
         }
       }
     });
@@ -36,8 +44,15 @@ var defaultProcessName = function(name) { return path.basename(name, path.extnam
 module.exports = function(options) {
   options = extend({
     processName: defaultProcessName,
-    namespace: ''
+    namespace: 'this',
+    noRedeclare: false
   }, options);
+
+  // Support removal of duplicate declarations
+  var alreadyDeclared = null;
+  if (options.noRedeclare) {
+    alreadyDeclared = {};
+  }
 
   var declareNamespace = function(contents, filename) {
     contents = contents.toString();
@@ -46,12 +61,12 @@ module.exports = function(options) {
     var name = options.processName(filename);
 
     // Prepend namespace to name
-    if (options.namespace !== false) {
+    if (options.namespace !== 'this') {
       name = options.namespace+'.'+name;
     }
 
     // Get namespace information for the final template name
-    var nameNSInfo = getNSInfo(name, true);
+    var nameNSInfo = getNSInfo(name, true, alreadyDeclared);
 
     // Add assignment
     contents = nameNSInfo.namespace+' = '+contents+';';

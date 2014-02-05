@@ -1,4 +1,4 @@
-var handlebarsPlugin = require('../');
+var declare = require('../');
 var should = require('should');
 var gutil = require('gulp-util');
 var os = require('os');
@@ -24,13 +24,32 @@ var fileMatchesExpected = function(file, expectedFileName) {
     String(file.contents).should.equal(getExpectedString(expectedFileName));
 };
 
-describe('gulp-handlebars', function() {
-  describe('handlebarsPlugin()', function() {
+describe('gulp-declare', function() {
+  describe('declare()', function() {
+
+    it('should declare based on filename by default', function(done) {
+      var stream = declare();
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Templates.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        should.exist(newFile);
+        should.exist(newFile.contents);
+        var contents = String(newFile.contents);
+        contents.should.equal('this["App"] = this["App"] || {};this["App"]["Templates"] = this["App"]["Templates"] || {};this["App"]["Templates"]["Main"] = function() { return "Main"; };');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
 
     it('should declare base namespaces', function(done) {
-      var stream = handlebarsPlugin({
-        namespace: 'MyApp.Templates',
-        declareNamespace: true
+      var stream = declare({
+        namespace: 'MyApp.Templates'
       });
 
       var fakeFile = new gutil.File({
@@ -51,9 +70,8 @@ describe('gulp-handlebars', function() {
     });
 
     it('should assign as a property of a namespace', function(done) {
-      var stream = handlebarsPlugin({
-        namespace: 'MyApp.Templates',
-        declareNamespace: true
+      var stream = declare({
+        namespace: 'MyApp.Templates'
       });
 
       var fakeFile = new gutil.File({
@@ -74,9 +92,8 @@ describe('gulp-handlebars', function() {
     });
 
     it('should assign as a property of a sub-namespace', function(done) {
-      var stream = handlebarsPlugin({
-        namespace: 'MyApp.Templates',
-        declareNamespace: true
+      var stream = declare({
+        namespace: 'MyApp.Templates'
       });
 
       var fakeFile = new gutil.File({
@@ -97,8 +114,7 @@ describe('gulp-handlebars', function() {
     });
 
     it('should support custom processName functions', function(done) {
-      var stream = handlebarsPlugin({
-        namespace: false,
+      var stream = declare({
         processName: function(name) {
           return 'x';
         }
@@ -122,7 +138,7 @@ describe('gulp-handlebars', function() {
     });
 
     it('should support custom processName functions with namespaces', function(done) {
-      var stream = handlebarsPlugin({
+      var stream = declare({
         namespace: 'App',
         processName: function(name) {
           return 'Main';
@@ -143,6 +159,88 @@ describe('gulp-handlebars', function() {
         done();
       });
       stream.write(fakeFile);
+      stream.end();
+    });
+
+    it('should process multiple files', function(done) {
+      var stream = declare({
+        namespace: 'Namespace'
+      });
+
+      var count = 0;
+      stream.on('data', function(newFile) {
+        should.exist(newFile);
+        newFile.contents.should.be.ok;
+        count++;
+      });
+
+      stream.on('end', function() {
+        count.should.equal(3);
+        done();
+      });
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      }));
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Header.js'),
+        contents: new Buffer('function() { return "Header"; }')
+      }));
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Footer.js'),
+        contents: new Buffer('function() { return "Footer"; }')
+      }));
+
+      stream.end();
+    });
+
+    it('should not re-declare namespace parts when noRedeclare: true', function(done) {
+      var stream = declare({
+        namespace: 'Namespace',
+        noRedeclare: true
+      });
+
+      var finalString = '';
+      stream.on('data', function(newFile) {
+        should.exist(newFile);
+        var contents = String(newFile.contents);
+        finalString += contents+'\n';
+      });
+
+      stream.on('end', function() {
+        var ns1matches = finalString.match(/this\["Namespace"\] = this\["Namespace"\] \|\| \{\};/g);
+        var ns2matches = finalString.match(/this\["Namespace"\]\["App"\] = this\["Namespace"\]\["App"\] \|\| \{\};/g);
+        should(ns1matches).be.ok;
+        should(ns2matches).be.ok;
+        ns1matches.length.should.equal(1);
+        ns2matches.length.should.equal(1);
+        done();
+      });
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      }));
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Header.js'),
+        contents: new Buffer('function() { return "Header"; }')
+      }));
+
+      stream.write(new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Footer.js'),
+        contents: new Buffer('function() { return "Footer"; }')
+      }));
+
       stream.end();
     });
 
