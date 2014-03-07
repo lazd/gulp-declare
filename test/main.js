@@ -21,7 +21,9 @@ var getExpectedString = function(filePath) {
 };
 
 var fileMatchesExpected = function(file, expectedFileName) {
-    String(file.contents).should.equal(getExpectedString(expectedFileName));
+  should.exist(file);
+  should.exist(file.contents);
+  file.contents.toString().should.equal(getExpectedString(expectedFileName));
 };
 
 describe('gulp-declare', function() {
@@ -37,10 +39,7 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.contents);
-        var contents = String(newFile.contents);
-        contents.should.equal('this["App"] = this["App"] || {};this["App"]["Templates"] = this["App"]["Templates"] || {};this["App"]["Templates"]["Main"] = function() { return "Main"; };');
+        fileMatchesExpected(newFile, 'Declaration based on filename.js');
         done();
       });
       stream.write(fakeFile);
@@ -59,10 +58,7 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.contents);
-        var contents = String(newFile.contents);
-        contents.slice(0, 98).should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};');
+        fileMatchesExpected(newFile, 'Base namespace.js');
         done();
       });
       stream.write(fakeFile);
@@ -81,10 +77,7 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.contents);
-        var contents = String(newFile.contents);
-        contents.should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};this["MyApp"]["Templates"]["App"] = function() { return "App"; };');
+        fileMatchesExpected(newFile, 'Assign as a property of a namespace.js');
         done();
       });
       stream.write(fakeFile);
@@ -103,10 +96,7 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.contents);
-        var contents = String(newFile.contents);
-        contents.should.equal('this["MyApp"] = this["MyApp"] || {};this["MyApp"]["Templates"] = this["MyApp"]["Templates"] || {};this["MyApp"]["Templates"]["App"] = this["MyApp"]["Templates"]["App"] || {};this["MyApp"]["Templates"]["App"]["Main"] = function() { return "App"; };');
+        fileMatchesExpected(newFile, 'Assign as a property of a subnamespace.js');
         done();
       });
       stream.write(fakeFile);
@@ -127,10 +117,7 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.path);
-        var contents = String(newFile.contents);
-        contents.should.equal('this["x"] = function() { return "Main"; };');
+        fileMatchesExpected(newFile, 'Custom processName function.js');
         done();
       });
       stream.write(fakeFile);
@@ -152,10 +139,41 @@ describe('gulp-declare', function() {
       });
 
       stream.on('data', function(newFile) {
-        should.exist(newFile);
-        should.exist(newFile.path);
-        var contents = String(newFile.contents);
-        contents.should.equal('this["App"] = this["App"] || {};this["App"]["Main"] = function() { return "Main"; };');
+        fileMatchesExpected(newFile, 'Custom processName with a namespace.js');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
+
+    it('should support custom separators', function(done) {
+       var stream = declare({ separator: '' });
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Templates.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        fileMatchesExpected(newFile, 'Custom separator.js');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
+
+    it('should support custom root', function(done) {
+       var stream = declare({ root: 'global' });
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('fixtures','App.Templates.Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        fileMatchesExpected(newFile, 'Custom root.js');
         done();
       });
       stream.write(fakeFile);

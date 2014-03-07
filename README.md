@@ -57,6 +57,20 @@ This option accepts a function which takes one argument (the filepath) and retur
 If this function returns a string containing periods (not including the file extension), they will be represented as a sub-namespace. See `options.namespace` for an example of the effect.
 
 
+#### options.separator
+Type: `String`  
+Default: `\n`
+
+The separator to use between declarations.
+
+
+#### options.root
+Type: `String`  
+Default: `this`
+
+The root object to declare the namespace within. Defaults to `this` (which is equal to `window` in the browser).
+
+
 #### options.noRedeclare
 Type: `Boolean`  
 Default: `false`

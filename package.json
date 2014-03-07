@@ -1,11 +1,12 @@
 {
   "name": "gulp-declare",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Safely declare namespaces and set their properties",
   "main": "index.js",
   "dependencies": {
     "vinyl-map": "~0.1.0",
-    "xtend": "~2.1.2"
+    "xtend": "~2.1.2",
+    "nsdeclare": "~0.0.0"
   },
   "devDependencies": {
     "gulp-util": "~2.2.14",
