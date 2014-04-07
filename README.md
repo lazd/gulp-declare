@@ -64,13 +64,6 @@ Default: `\n`
 The separator to use between declarations.
 
 
-#### options.root
-Type: `String`  
-Default: `this`
-
-The root object to declare the namespace within. Defaults to `this` (which is equal to `window` in the browser).
-
-
 #### options.noRedeclare
 Type: `Boolean`  
 Default: `false`
@@ -100,6 +93,35 @@ this["MyApp"]["Main"]["Header"] = /* File contents from Main.Header.js */;
 this["MyApp"]["Main"]["Footer"] = /* File contents from Main.Footer.js */;
 ```
 
+#### options.root
+Type: `String`  
+Default: `this`
+
+The root object to declare the namespace within. Defaults to `this` (which is equal to `window` in the browser).
+
+This option is prepended to the assignment statement, so special characters or operators such as `-` should be avoided as they will result in an invalid left-hand assignment error.
+
+You can specify `root: 'module.exports'` with no namespace if you would like to assign as properties of an exported module:
+
+```js
+gulp.src(['server/templates/*.hbs'])
+  .pipe(handlebars())
+  .pipe(declare({
+    root: 'module.exports', // Declare as properties of module.exports
+    noRedeclare: true // Avoid duplicate output
+  })
+  .pipe(concat('templates.js'))
+  .pipe(gulp.dest('build/js/'));
+```
+
+Which results in the following `templates.js`:
+
+```js
+module.exports["App"] = module.exports["App"] || {};
+module.exports["App"]["Main"] = /* File contents from App.Main.js */;
+module.exports["App"]["Header"] = /* File contents from App.Header.js */;
+module.exports["App"]["Footer"] = /* File contents from App.Footer.js */;
+```
 
 
 [travis-url]: http://travis-ci.org/lazd/gulp-declare
