@@ -4,14 +4,14 @@
   "description": "Safely declare namespaces and set their properties",
   "main": "index.js",
   "dependencies": {
-    "vinyl-map": "~0.1.0",
-    "xtend": "~2.1.2",
-    "nsdeclare": "~0.0.0"
+    "vinyl-map": "^1.0.1",
+    "xtend": "^4.0.0",
+    "nsdeclare": "^0.1.0"
   },
   "devDependencies": {
-    "gulp-util": "~2.2.14",
-    "should": "~3.1.2",
-    "mocha": "~1.17.1"
+    "gulp-util": "^3.0.0",
+    "should": "^4.0.4",
+    "mocha": "^1.21.4"
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha"
@@ -30,6 +30,6 @@
     "url": "https://github.com/lazd/gulp-declare/issues"
   },
   "engines": {
-    "node" : ">=0.9"
+    "node" : ">=0.10"
   }
 }
