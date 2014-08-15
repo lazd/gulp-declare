@@ -1,6 +1,6 @@
 {
   "name": "gulp-declare",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Safely declare namespaces and set their properties",
   "main": "index.js",
   "dependencies": {
