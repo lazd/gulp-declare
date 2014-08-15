@@ -12,16 +12,17 @@ npm install --save-dev gulp-declare
 Then, add it to your `gulpfile.js`:
 
 ```javascript
-var handlebars = require('gulp-handlebars');
 var declare = require('gulp-declare');
+var concat = require('gulp-concat');
 
-gulp.task('templates', function(){
-  gulp.src(['client/templates/*.hbs'])
-    .pipe(handlebars()) // returns a bare function
+gulp.task('models', function() {
+  // Define each model as a property of a namespace according to its filename
+  gulp.src(['client/models/*.js'])
     .pipe(declare({
-      namespace: 'MyApp.templates'
+      namespace: 'MyApp.models',
+      noRedeclare: true // Avoid duplicate declarations
     }))
-    .pipe(concat('templates.js'))
+    .pipe(concat('models.js')) // Combine into a single file
     .pipe(gulp.dest('build/js/'));
 });
 ```
@@ -34,9 +35,9 @@ gulp.task('templates', function(){
 Type: `String`  
 Default: `"this"`
 
-The namespace in which the file contents will be assigned. Use dot notation (e.g. `MyApp.Templates`) for nested namespaces.
+The namespace in which the file contents will be assigned. Use dot notation (e.g. `MyApp.templates`) for nested namespaces.
 
-For example, if the namespace is `MyApp.Templates` and a file is named `App.Header.js`, the following declaration will be added:
+For example, if the namespace is `MyApp.templates` and a file is named `App.Header.js`, the following declaration will be added:
 
 ```javascript
 this["MyApp"] = this["MyApp"] || {};
@@ -52,10 +53,11 @@ If the default value of `"this"` is provided, namespace declaration will be dete
 Type: `Function`  
 Default: Strip file extension
 
-This option accepts a function which takes one argument (the filepath) and returns a string which will be used as the key for object. By default, the filename minus the extension is used.
+This option accepts a function which takes one argument (the path to the file) and returns a string which will be used as the key for object. By default, the filename minus the extension is used.
 
-If this function returns a string containing periods (not including the file extension), they will be represented as a sub-namespace. See `options.namespace` for an example of the effect.
+This function should return a namespace path in dot notation, such as `Prop.sub.item`, which is then combined with `options.namespace`. See [`options.namespace`](#optionsnamespace) above for an example.
 
+See [`declare.processNameByPath`](#declareprocessnamebypathfilepath) to generate namespace paths based on directory structure.
 
 #### options.separator
 Type: `String`  
@@ -74,7 +76,7 @@ If `true`, parts of the namespace that were declared as a result of previous fil
 * Main.Header.js
 * Main.Footer.js
 
-And if `declare` is invoked with `namespace: 'MyApp'` and `noRedeclare: true`, the contents of the streamed files will look like this:
+And if `declare` is invoked with `{ namespace: 'MyApp', noRedeclare: true }`, the contents of the streamed files will look like this:
 
 **Main.Content.js**
 ```javascript
@@ -93,6 +95,8 @@ this["MyApp"]["Main"]["Header"] = /* File contents from Main.Header.js */;
 this["MyApp"]["Main"]["Footer"] = /* File contents from Main.Footer.js */;
 ```
 
+This option makes the most sense when you're concatenating files later and want to minimize duplicate declarations. Regardless of this option, `gulp-declare` will never clobber existing namespaces or their properties.
+
 #### options.root
 Type: `String`  
 Default: `this`
@@ -101,16 +105,15 @@ The root object to declare the namespace within. Defaults to `this` (which is eq
 
 This option is prepended to the assignment statement, so special characters or operators such as `-` should be avoided as they will result in an invalid left-hand assignment error.
 
-You can specify `root: 'module.exports'` with no namespace if you would like to assign as properties of an exported module:
+When using Node or Browserify, you can specify `root: 'module.exports'` with no namespace if you would like to assign as properties of an exported module:
 
 ```js
-gulp.src(['server/templates/*.hbs'])
-  .pipe(handlebars())
+gulp.src(['models/*.js'])
   .pipe(declare({
     root: 'module.exports', // Declare as properties of module.exports
-    noRedeclare: true // Avoid duplicate output
+    noRedeclare: true // Avoid duplicate declarations
   })
-  .pipe(concat('templates.js'))
+  .pipe(concat('models.js'))
   .pipe(gulp.dest('build/js/'));
 ```
 
@@ -121,6 +124,52 @@ module.exports["App"] = module.exports["App"] || {};
 module.exports["App"]["Main"] = /* File contents from App.Main.js */;
 module.exports["App"]["Header"] = /* File contents from App.Header.js */;
 module.exports["App"]["Footer"] = /* File contents from App.Footer.js */;
+```
+
+### declare.processNameByPath(filePath)
+
+Pass this method as `options.processName` so the path within the namespace matches the path in the filesystem combined with dot notation from the filename:
+
+```js
+gulp.src(['templates/**/*.html'])
+  .pipe(domly()) // Compile HTML to document fragment builder functions
+  .pipe(declare({
+    namespace: 'NS', // Use NS as the base namespace
+    noRedeclare: true, // Avoid duplicate declarations
+    processName: declare.processNameByPath // Include the path as part of the sub-namespace
+  })
+  .pipe(concat('models.js'))
+  .pipe(gulp.dest('build/js/'));
+```
+
+The above configuration will result in the following mapping:
+
+| File path                         | Namespace path                   |
+| --------------------------------- | -------------------------------- |
+| templates/App.hbs                 | NS.templates.App                 |
+| templates/App/header.hbs          | NS.templates.App.header          |
+| templates/App/content.initial.hbs | NS.templates.App.content.initial |
+| templates/Other.item.hbs          | NS.templates.Other.item          |
+
+**Note:** In the above example, `NS.templates.App.header` is a function that is stored as a property of the `NS.templates.App` function. As everything in JavaScript is an object, even functions, this is perfectly valid and works in all environments. If this hurts your brain, store `templates/App.hbs` as `templates/App/main.hbs` and access it as `NS.templates.App.main`.
+
+#### Customizing the path used to generate the namespace
+
+If you want to remove or change part of the path, you can define your own `options.processName` and use `declare.processNameByPath()` within it. The following example results in the same namespace paths as above with a different directory structure:
+
+```js
+gulp.src(['client/templates/**/*.html'])
+  .pipe(domly()) // Compile HTML to document fragment builder functions
+  .pipe(declare({
+    namespace: 'NS.templates', // Declare within NS.templates
+    noRedeclare: true, // Avoid duplicate declarations
+    processName: function(filePath) {
+      // Drop the client/templates/ folder from the namespace path
+      return declare.processNameByPath(filePath.replace('client/templates/', ''));
+    }
+  })
+  .pipe(concat('templates.js'))
+  .pipe(gulp.dest('build/js/'));
 ```
 
 

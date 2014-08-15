@@ -146,6 +146,26 @@ describe('gulp-declare', function() {
       stream.end();
     });
 
+    it('should correctly split based on path when using processNameByPath', function(done) {
+      var stream = declare({
+        namespace: 'App',
+        processName: declare.processNameByPath
+      });
+
+      var fakeFile = new gutil.File({
+        base: 'fixtures',
+        path: path.join('templates','Main.js'),
+        contents: new Buffer('function() { return "Main"; }')
+      });
+
+      stream.on('data', function(newFile) {
+        fileMatchesExpected(newFile, 'processNameByPath.js');
+        done();
+      });
+      stream.write(fakeFile);
+      stream.end();
+    });
+
     it('should support custom separators', function(done) {
        var stream = declare({ separator: '' });
 
